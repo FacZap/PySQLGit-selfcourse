@@ -1,0 +1,7 @@
+tag,minimo,maximo,unidad,descripcion
+TT-101,60,95,degC,Temperatura de salida del reactor
+PT-204,3.0,6.5,bar,Presion de la linea de vapor
+FT-310,40,120,m3/h,Caudal de alimentacion
+LT-115,20,90,%,Nivel del tanque pulmon
+VT-501,0,7.1,mm/s,Vibracion del motor principal
+MT-501,5,45,A,Corriente del motor principal
