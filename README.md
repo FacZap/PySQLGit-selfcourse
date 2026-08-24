@@ -106,6 +106,7 @@ tagstats/
 tests/              70 pruebas de pytest
 scripts/            generación de datos, verificación local, demo
 docs/CONCEPTOS.md   por qué está hecho así
+docs/PASOS.md       en qué orden se armó, paso a paso
 ```
 
 El flujo es una cadena de generadores: **leer → filtrar → agrupar → calcular →
@@ -135,4 +136,5 @@ así que sirve igual antes de instalar ruff y black.
   carácter fuera de su codificación aborta el programa con `UnicodeEncodeError`.
 
 El detalle de los conceptos de Python usados está en
-[docs/CONCEPTOS.md](docs/CONCEPTOS.md).
+[docs/CONCEPTOS.md](docs/CONCEPTOS.md), y el orden en que se armó el proyecto, en
+[docs/PASOS.md](docs/PASOS.md).
