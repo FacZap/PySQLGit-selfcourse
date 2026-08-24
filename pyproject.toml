@@ -1,0 +1,61 @@
+[project]
+name = "tagstats"
+version = "0.1.0"
+description = "CLI para resumir estadisticas de tags de planta a partir de un CSV"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+tagstats = "tagstats.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["tagstats"]
+
+# ---------------------------------------------------------------------------
+# black: formateo automatico. Una sola opinion, cero discusiones de estilo.
+# ---------------------------------------------------------------------------
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+# ---------------------------------------------------------------------------
+# ruff: linter (errores, imports sin usar, orden de imports, modernizaciones).
+# line-length igual al de black para que no se peleen entre ellos.
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle: errores de estilo
+    "F",   # pyflakes: variables/imports sin usar, nombres indefinidos
+    "W",   # pycodestyle: warnings
+    "I",   # isort: orden de imports
+    "UP",  # pyupgrade: sintaxis moderna
+    "B",   # flake8-bugbear: trampas comunes
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+    "RUF", # reglas propias de ruff
+]
+# Los textos del proyecto estan en espanol: los acentos no son "caracteres ambiguos".
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["tagstats"]
+
+# ---------------------------------------------------------------------------
+# pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+# Agrega la raiz del repo al sys.path de las pruebas: permite "import tagstats"
+# sin instalar el paquete ni definir PYTHONPATH a mano.
+pythonpath = ["."]

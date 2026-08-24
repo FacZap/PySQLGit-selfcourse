@@ -1,0 +1,15 @@
+# Dependencias SOLO de desarrollo.
+# El paquete tagstats no tiene dependencias de runtime: usa la biblioteca
+# estandar (csv, argparse, statistics, pathlib, dataclasses).
+#
+# Instalacion recomendada (con entorno virtual):
+#   python -m venv .venv
+#   .venv\Scripts\Activate.ps1
+#   pip install -r requirements-dev.txt
+#
+# Sin entorno virtual (lo que se uso en esta resolucion):
+#   python -m pip install --user -r requirements-dev.txt
+
+black==25.1.0
+ruff==0.12.2
+pytest==8.4.1

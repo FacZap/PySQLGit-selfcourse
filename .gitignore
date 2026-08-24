@@ -1,0 +1,39 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# --- Entornos virtuales ---
+.venv/
+venv/
+env/
+.python-version
+
+# --- Herramientas ---
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# --- Editores / SO ---
+.idea/
+*.swp
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# --- Salidas locales del CLI ---
+salidas/
+*.out.csv
+*.out.json
+
+# Nota: .vscode/ NO se ignora a propósito.
+# settings.json y extensions.json son configuración compartida del proyecto
+# (formateo, linter, pytest) y conviene que viaje con el repo.
