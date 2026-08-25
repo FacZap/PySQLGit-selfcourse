@@ -1,0 +1,84 @@
+El directorio está vacío y tengo Python 3.14.2, git 2.52 y pytest 9.1.1 disponibles (ruff/black no están instalados — lo anoto para el final). Armo el proyecto completo.
+
+Bash está roto en este entorno (error de cygwin), así que trabajo con PowerShell y las herramientas de archivos.
+
+El proyecto funciona. Ahora el historial de Git (local, sin remoto).
+
+Verifico que cada commit del historial quede en verde (no solo el estado final):
+
+Listo. Todo está en `D:\CLAUDE\roadmaps\semana-01-tagstats` — 28 archivos versionados, 11 commits, 70 tests en verde.
+
+## Qué quedó
+
+```
+tagstats/          modelos.py · lectura.py · estadisticas.py · reporte.py · cli.py
+tests/             70 pruebas (conftest + 6 archivos)
+data/              sensores_planta.csv (864 filas, 6 tags) · limites.csv · sensores_sucios.csv · sensores_vacio.csv
+scripts/           generar_datos.py · verificar.ps1 · demo.ps1
+docs/CONCEPTOS.md  el documento pedido
+```
+
+El CLI lee el CSV, filtra (por tag, ventana de tiempo, calidad) y devuelve min/max/promedio/desvío/alarmas por tag en tabla, JSON o CSV:
+
+```bash
+python -m tagstats data/sensores_planta.csv -l data/limites.csv
+```
+
+```
+TAG     UNIDAD  MUESTRAS      MIN      MAX  PROMEDIO  DESVIO  ALARMAS  %ALARMA
+FT-310  m3/h         144    67.30    95.30     82.07    8.59        0      0.0
+...
+TT-101  degC         144    73.70   102.10     80.24    7.27       16     11.1
+TOTAL: 6 tags | 864 muestras | 34 alarmas
+```
+
+## Checklist
+
+| Ítem | Estado |
+|---|---|
+| Crear venv y configurar ruff + black en VS Code | **Parcial por pedido tuyo.** venv omitido; ruff+black configurados en [pyproject.toml](semana-01-tagstats/pyproject.toml) y [.vscode/settings.json](semana-01-tagstats/.vscode/settings.json) con `line-length=100` compartido. **No pude ejecutarlos: no están instalados en tu Python** |
+| Repo con README y .gitignore de Python | Repo **local** (sin remoto, sin push), [README.md](semana-01-tagstats/README.md) y [.gitignore](semana-01-tagstats/.gitignore) |
+| Script que parsea un CSV y resume estadísticas | [tagstats/](semana-01-tagstats/tagstats/cli.py), 5 módulos, 0 dependencias de runtime |
+| ≥5 commits atómicos convencionales | **11 commits** + rama `feat/estadisticas-cli` integrada con `merge --no-ff`. Verifiqué commit por commit en worktrees temporales: **todos en verde** (el primero es solo config, sin tests) |
+
+Lo que no está: `ruff check` y `black --check` nunca corrieron. Cuidé el formato a mano (ninguna línea >100, todo compila), pero eso no reemplaza la herramienta. Para cerrarlo:
+
+```bash
+python -m pip install --user ruff black
+```
+
+Después `powershell -ExecutionPolicy Bypass -File scripts\verificar.ps1` corre lint + formato + tests (hoy saltea los dos primeros con un aviso).
+
+## El documento
+
+[docs/CONCEPTOS.md](semana-01-tagstats/docs/CONCEPTOS.md) (~2,5 páginas): por qué 5 módulos y no un script, ruff/black y por qué comparten `line-length`, commits atómicos y `--no-ff`, y después el Python idiomático con el código real al lado — dataclasses `frozen+slots`, la cadena de generadores (el CSV se recorre una sola vez), dónde sí y dónde no usar comprehensions, las tres formas de unpacking, f-strings con ancho dinámico, y las trampas de la estándar (BOM de Excel, `newline=""`, `restkey`, `math.isfinite`). Cierra con dos decisiones que no son de sintaxis: el callback `al_descartar` y stdout/stderr + códigos de salida.
+
+## Cuánto le lleva a un junior
+
+**Depende de qué versión.** El mínimo que aprueba la checklist —un script de ~100 líneas, argparse simple, 5 tests— son **4 a 6 horas**.
+
+Esta versión, para un junior que ve generadores y pytest por primera vez: **20 a 35 horas ≈ 3 a 5 días** efectivos.
+
+| | |
+|---|---|
+| Entorno (venv, ruff/black en VS Code, pyproject) | 2–4 h — casi todo peleando con el intérprete y formateadores duplicados |
+| Git: .gitignore, ramas, Conventional Commits | 1–2 h |
+| Datos de ejemplo | 1–2 h |
+| Parseo CSV + modelos | 3–5 h — encoding, BOM y `newline=""` son 2 h de misterio la primera vez |
+| Estadísticas | 1–2 h |
+| Reporte (tabla alineada, json, csv) | 2–4 h — el `f"{v:>{ancho}{fmt}}"` cuesta |
+| CLI con argparse | 2–4 h |
+| 70 tests (fixtures, `tmp_path`, `capsys`, `parametrize`) | 4–8 h — lo más caro, todo concepto nuevo |
+| README + documento | 2–4 h |
+| Depuración y rehacer el historial | 2–4 h |
+
+Si ya usó pytest y argparse antes, baja a **8–12 horas**. El multiplicador real no es escribir el código: es que la mitad de los temas de la semana (generadores, fixtures, conventional commits) se aprenden mientras se usan.
+
+---
+
+Dos cosas al margen:
+
+- Tu `git config --global user.email` dice `zapatafacundo17@gamil.com` — *gamil*, no *gmail*. Los 11 commits quedaron con ese autor. Cuando subas a GitHub no se van a asociar a tu cuenta. Se arregla con `git config --global user.email "tu@mail.real"` y, si querés reescribir los que ya están, `git rebase --root --exec "git commit --amend --no-edit --reset-author"`.
+- El Bash de este entorno está roto (error de cygwin al montar rutas); trabajé todo con PowerShell. Si lo usás desde otra terminal, sin problema.
+
+¿Querés que publique `CONCEPTOS.md` como artifact para leerlo en el navegador, o lo dejamos como archivo del repo?
