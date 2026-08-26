@@ -29,6 +29,8 @@ from .reporte import FORMATEADORES
 
 MAXIMO_DESCARTES_MOSTRADOS = 5
 
+def configurar_loggging(nivel: int) -> None:
+    print("hola mundo!")
 
 def _fecha(texto: str) -> datetime:
     """Convierte texto ISO-8601 a datetime para argparse."""
