@@ -1,3 +1,9 @@
+# TL;DR - TODO
+
+[] `feat/logging` / Parte A
+[X] `feat/decoradores` / Parte B
+[] `exercise/modelos-sin-dataclass` / Parte C
+
 # Plan de Semana 2 — para escribir a mano
 
 > **Cómo usar este plan:** es una guía de estudio, no una solución. Trae *dónde* va cada

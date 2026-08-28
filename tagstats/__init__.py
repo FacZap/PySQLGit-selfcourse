@@ -7,6 +7,7 @@ El paquete esta dividido por responsabilidad:
 * ``estadisticas``  -> que se calcula (min, max, promedio, alarmas)
 * ``reporte``       -> como sale el dato (tabla, json, csv)
 * ``cli``           -> como lo pide el usuario (argumentos, codigos de salida)
+* ``decoradores``   -> nuevo
 """
 
 __version__ = "0.1.0"
