@@ -7,6 +7,28 @@ falla en el momento en vez de devolver ``None`` silenciosamente.
 ``frozen=True``  -> inmutable: una lectura historica no se corrige "en el aire".
 ``slots=True``   -> sin ``__dict__`` por instancia: menos memoria y mas rapido,
                     que importa cuando el CSV trae cientos de miles de filas.
+
+  ---------------------
+
+         The dataclass decorator helps you build, wait for it, data classes. 
+
+         In short, it takes care of some annoying things for you: defining a couple of methods, such as init, str, repr, eq, gt, etc. It does tuple equality and comparison. It also defines match args for use in match statements. It lets you freeze instances, making them immutable. It's quite convenient honestly. 
+
+         Say you're coding a 🎲 die roll challenge for an rpg, you could write a RollResult class that holds the roll and the roll/challenge ratio:
+
+            @dataclass(frozen=True)
+            class RollResult:
+            roll: int
+            ratio: float
+
+         And you can use it wherever it makes sense: 
+
+            if result.ratio >= 1:
+            print("success")
+
+            match result: 
+            case RollResult(20, _):
+                print("nat 20")
 """
 
 from __future__ import annotations
@@ -18,7 +40,12 @@ from datetime import datetime
 #: Un ``frozenset`` porque es constante, no se modifica y la busqueda es O(1).
 CALIDADES_CONFIABLES = frozenset({"good", "ok", "buena"})
 
+"""
+slots: If true (the default is False), __slots__ attribute will be generated and new class will be returned instead of the original one. If __slots__ is already defined in the class, then TypeError is raised.
+frozen: If true (the default is False), assigning to fields will generate an exception. This emulates read-only frozen instances.
 
+If __setattr__() or __delattr__() is defined in the class and frozen is true, then TypeError is raised.
+"""
 @dataclass(frozen=True, slots=True)
 class Lectura:
     """Una muestra de un tag en un instante determinado."""

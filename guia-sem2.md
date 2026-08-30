@@ -1,3 +1,9 @@
+# TL;DR - TODO
+
+[] `feat/logging` / Parte A
+[X] `feat/decoradores` / Parte B
+[X] `exercise/modelos-sin-dataclass` / Parte C
+
 # Plan de Semana 2 — para escribir a mano
 
 > **Cómo usar este plan:** es una guía de estudio, no una solución. Trae *dónde* va cada
@@ -225,6 +231,14 @@ class Lectura:
     @property
     def es_confiable(self): ...
 ```
+#### Dunder Methods
+Operation | Dunder Method | Returns | Comments
+T(a, b=3) | T.__init__(x, a, b=3) | None | -
+x.thing = value | x.__setattr__("thing", value) | None | -
+repr(x) | x.__repr__() | str | Para usar con el interpretador/consola de Python (REPL)
+x == y | x.__eq__(y) | Typically bool | -
+hash(x) | x.__hash__() | int | https://www.pythonmorsels.com/every-dunder-method/#:~:text=Hashable,%5F%5Fhash%5F%5F%2E
+
 
 - **Aprendizaje 1:** `frozen=True` = override de `__setattr__` + `object.__setattr__` adentro
   del `__init__`. Esto es *exactamente* lo que hace la dataclass por debajo.
@@ -301,6 +315,17 @@ comparación honesta:
 - `pytest tests/test_modelos_alternativos.py -q` en verde (mismo contrato en ambas impls).
 - `pytest -q` completo sigue en verde (no rompiste `modelos.py` original).
 
+
+### Cierre: ¿por qué es "mejor" @dataclass que esto?
+
+Lo que armaste en este ejercicio prueba que no hay magia: frozen=True es un __setattr__/__delattr__ que explotan más object.__setattr__ en el init; slots=True es una tupla __slots__; __match_args__ es otra tupla; __eq__/__hash__/__repr__ son comparar/hashear/formatear una tupla de campos. Nada esotérico. Pero fijate lo que eso costó en líneas y en superficie de error:
+
+Una sola fuente de verdad. En modelos.py los campos se declaran una vez (las anotaciones de tipo) y de ahí salen __init__, __repr__, __eq__, __hash__, __slots__ y __match_args__. Acá los repetiste a mano en seis lugares distintos por clase. Cada repetición es una oportunidad de que se desincronicen — literalmente lo que acaba de pasar con tu __match_args__ = __slots__: tuviste que pensar si era seguro reusar la tupla en vez de que el lenguaje te lo garantice.
+Los bugs sutiles ya están resueltos. Ejemplos concretos de este mismo archivo: te olvidaste (hasta que lo agregué) de __delattr__ — sin él, del lectura.valor no explota. El comentario que ya tenías, "definir __eq__ pone __hash__=None", es una trampa real de Python puro: en una clase normal, si escribís __eq__ a mano, Python te pisa el __hash__ heredado de object a menos que también lo definas vos. @dataclass(frozen=True) sabe esa regla y te genera el __hash__ correcto solo; con clases manuales, es una regla que tenés que recordar cada vez.
+Menos código no significa menos capacidad. @dataclass te da además __match_args__, comparación por tipo correcta (NotImplemented cuando corresponde), y opciones como order=True, kw_only=True, field(default_factory=...) sin escribir una línea extra — todo lo que acá se construye a pulso, ahí es una palabra en el decorador.
+El costo de mantenimiento escala con los campos. Agregar un campo nuevo a Lectura en modelos.py es una línea. Acá es tocar __slots__, __match_args__, __init__, _campos() y el f-string de __repr__ — cinco lugares, y si te olvidás uno, el bug no siempre es ruidoso (por ejemplo, olvidar un campo en _campos() rompe __eq__/__hash__ en silencio, no con una excepción).
+
+En síntesis: hacerlo a mano una vez vale la pena como ejercicio — ahora sabés exactamente qué hace frozen=True y por qué object.__setattr__ es necesario, en vez de tratarlo como caja negra. Pero en código real, @dataclass no es "menos control", es la misma mecánica generada automáticamente a partir de una única declaración, con las trampas conocidas (como la de __hash__) ya resueltas por el lenguaje.
 ---
 
 ## Verificación de punta a punta
