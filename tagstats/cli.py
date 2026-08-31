@@ -26,9 +26,22 @@ from . import __version__
 from .estadisticas import resumir
 from .lectura import ErrorDeDatos, FilaInvalidaError, filtrar, leer_lecturas, leer_limites
 from .reporte import FORMATEADORES
+import logging
 
 MAXIMO_DESCARTES_MOSTRADOS = 5
 
+def configurar_logging(nivel: int) -> None:
+    root = logging.getLogger()
+    root.setLevel(nivel)
+
+    # Evitar acumular handlers si la función se llama varias veces.
+    root.handlers.clear()
+
+    handler = logging.StreamHandler(sys.stderr)
+    formatter = logging.Formatter("%(levelname)s %(message)s")
+    handler.setFormatter(formatter)
+
+    root.addHandler(handler)
 
 def _fecha(texto: str) -> datetime:
     """Convierte texto ISO-8601 a datetime para argparse."""
@@ -39,6 +52,12 @@ def _fecha(texto: str) -> datetime:
             f"fecha invalida {texto!r}: se espera ISO-8601, por ejemplo 2026-08-24T06:00"
         ) from error
 
+
+"""NUEVO
+Y sumá un flag a `construir_parser()` para elegir verbosidad, p. ej. `-v/--verbose`
+(`action="count"`, así `-v`=INFO, `-vv`=DEBUG) o `--log-nivel {INFO,DEBUG,...}`. Llamá a
+`configurar_logging(...)` al principio de `main()`, antes del `try`.
+"""
 
 def construir_parser() -> argparse.ArgumentParser:
     """Arma el parser. Separado de ``main`` para poder testearlo aparte."""
@@ -56,6 +75,15 @@ def construir_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "csv", type=Path, help="CSV de lecturas (timestamp,tag,valor,unidad,calidad)"
     )
+    # New
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="count",
+        default=0,
+        help="Logger"
+    )
+    # EndNew
     parser.add_argument(
         "-l",
         "--limites",
@@ -115,6 +143,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     descartes: list[FilaInvalidaError] = []
     # El metodo .append de la lista ES el callback: sin lambda ni funcion extra.
     al_descartar = descartes.append if args.tolerante else None
+
+    niveles = {0: logging.WARNING, 1: logging.INFO}
+    nivel = niveles.get(args.verbose, logging.DEBUG)  # -vv o más -> DEBUG
+    configurar_logging(nivel)
 
     try:
         limites = leer_limites(args.limites) if args.limites else {}
