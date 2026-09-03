@@ -1,6 +1,6 @@
 # TL;DR - TODO
 
-[] `feat/logging` / Parte A
+[X] `feat/logging` / Parte A
 [X] `feat/decoradores` / Parte B
 [X] `exercise/modelos-sin-dataclass` / Parte C
 

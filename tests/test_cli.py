@@ -9,11 +9,12 @@ a ``sys.exit`` por su cuenta.
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 
 import pytest
 
-from tagstats.cli import main
+from tagstats.cli import configurar_logging, main
 
 
 def test_reporte_en_tabla(csv_lecturas: Path, csv_limites: Path, capsys):
@@ -137,3 +138,58 @@ def test_fecha_invalida_devuelve_2(csv_lecturas: Path):
         main([str(csv_lecturas), "--desde", "ayer"])
 
     assert excepcion.value.code == 2
+
+
+@pytest.fixture
+def root_logger():
+    """Guarda y restaura el root logger: configurar_logging() lo pisa por completo
+    (setLevel + handlers.clear()) y pytest tambien engancha ahi su propio handler
+    para capturar logs, asi que sin restaurar una prueba deja sucio el estado
+    global para las que corren despues."""
+    root = logging.getLogger()
+    nivel_original = root.level
+    handlers_originales = root.handlers[:]
+    yield root
+    root.setLevel(nivel_original)
+    root.handlers[:] = handlers_originales
+
+
+def test_configurar_logging_setea_nivel_y_agrega_un_handler(root_logger):
+    configurar_logging(logging.DEBUG)
+
+    assert root_logger.level == logging.DEBUG
+    assert len(root_logger.handlers) == 1
+    assert isinstance(root_logger.handlers[0], logging.StreamHandler)
+
+
+def test_configurar_logging_no_acumula_handlers_si_se_llama_dos_veces(root_logger):
+    configurar_logging(logging.INFO)
+    configurar_logging(logging.DEBUG)
+
+    assert len(root_logger.handlers) == 1
+    assert root_logger.level == logging.DEBUG
+
+
+def test_sin_verbose_setea_nivel_warning(csv_lecturas: Path, capsys, root_logger):
+    main([str(csv_lecturas)])
+
+    assert root_logger.level == logging.WARNING
+
+
+def test_v_setea_nivel_info(csv_lecturas: Path, capsys, root_logger):
+    main([str(csv_lecturas), "-v"])
+
+    assert root_logger.level == logging.INFO
+
+
+def test_doble_v_setea_nivel_debug(csv_lecturas: Path, capsys, root_logger):
+    main([str(csv_lecturas), "-vv"])
+
+    assert root_logger.level == logging.DEBUG
+
+
+def test_mas_de_dos_v_tambien_cae_en_debug(csv_lecturas: Path, capsys, root_logger):
+    """El .get(args.verbose, DEBUG) del mapeo hace que -vvv (o mas) siga en DEBUG."""
+    main([str(csv_lecturas), "-vvv"])
+
+    assert root_logger.level == logging.DEBUG
