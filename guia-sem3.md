@@ -83,10 +83,30 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 import pandas as pd
 
+"""
+Two-dimensional, size-mutable, potentially heterogeneous tabular data.
+
+Data structure also contains labeled axes (rows and columns). Arithmetic operations align on both row and column labels. Can be thought of as a dict-like container for Series objects. The primary pandas data structure.
+
+class pandas.DataFrame(data=None, index=None, columns=None, dtype=None, copy=None)
+ejemplo
+df = pd.DataFrame(np.random.randn(6, 4), index=dates, columns=list("ABCD"))
+df2 = pd.DataFrame(
+    {
+        "A": 1.0,
+        "B": pd.Timestamp("20130102"),
+        "C": pd.Series(1, index=list(range(4)), dtype="float32"),
+        "D": np.array([3] * 4, dtype="int32"),
+        "E": pd.Categorical(["test", "train", "test", "train"]),
+        "F": "foo",
+    }
+)
+"""
+
 class FuenteDeDatos(ABC):
     """Contrato: sé de dónde salen los datos crudos, no cómo se limpian."""
     @abstractmethod
-    def leer(self) -> pd.DataFrame:
+    def leer(self) -> pd.DataFrame: # sin argumentos, devuelve un pd.Dataframe
         ...
 
 class FuenteCSV(FuenteDeDatos):
