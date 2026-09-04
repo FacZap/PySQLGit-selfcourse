@@ -48,7 +48,7 @@ class FuenteCSV(FuenteDeDatos):
         self.ruta = Path(ruta)
 
     def leer(self) -> pd.DataFrame:
-        lector = pd.read_csv(self.ruta, dtype=str)
+        lector = pd.read_csv(self.ruta, dtype=str) #lector es un pd.DataFrame, no un generador ni un iterador. No hace falta hacerle un yield.
         # validar cabecera
             # if lector.columns == self.COLUMNAS:
             # lector.columns es un pd.Index; compararlo con == contra una tupla hace una comparación elemento a elemento (te devuelve un array de True/False, uno por columna) y además exige que estén en el mismo orden y sin ninguna de más. Un CSV real puede traer las columnas en otro orden, o alguna extra, y sería válido igual.
@@ -61,16 +61,13 @@ class FuenteCSV(FuenteDeDatos):
             raise CabeceraInvalidaError(
                 f"{self.ruta.name}: faltan columnas obligatorias: {', '.join(faltantes)}"
             )
-
         return lector
+    
+        # en el momento en que metés un yield adentro, Python convierte automáticamente tu función en un generador, y eso choca con lo que prometiste devolver.
 
-        #en el momento en que metés un yield adentro, Python convierte automáticamente tu función en un generador, y eso choca con lo que prometiste devolver.
-
-        # TODO: pd.read_csv(self.ruta, dtype=str)  <- leer TODO como texto a propósito:
         #       la limpieza/coerción de tipos es responsabilidad de Limpiador, no de acá.
         #       Con dtype=str evitás que pandas "adivine" y te oculte los N/A e inf.
-        # TODO: validar que estén las COLUMNAS (si falta alguna, levantá un error claro,
-        #       al estilo CabeceraInvalidaError de tagstats/lectura.py).
+
         
     
     """
