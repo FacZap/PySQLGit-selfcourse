@@ -10,6 +10,11 @@
 # Sin entorno virtual (lo que se uso en esta resolucion):
 #   python -m pip install --user -r requirements-dev.txt
 
+# pandas es dependencia de tagframe (no de tagstats). Se lista aca para que
+# "pip install -r requirements-dev.txt" deje la suite entera en verde; en
+# produccion se instala con "pip install -e .[frame]".
+pandas==2.2.3
+
 black==25.1.0
 ruff==0.12.2
 pytest==8.4.1

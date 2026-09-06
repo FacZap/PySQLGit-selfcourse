@@ -4,7 +4,12 @@ version = "0.1.0"
 description = "CLI para resumir estadisticas de tags de planta a partir de un CSV"
 readme = "README.md"
 requires-python = ">=3.11"
+# tagstats no tiene dependencias de runtime y se queda asi: es parte de su
+# identidad. pandas entra solo con el extra "frame", que habilita tagframe.
 dependencies = []
+
+[project.optional-dependencies]
+frame = ["pandas>=2.2"]   # pip install -e .[frame]
 
 [project.scripts]
 tagstats = "tagstats.cli:main"
@@ -14,7 +19,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["tagstats"]
+packages = ["tagstats", "tagframe"]
 
 # ---------------------------------------------------------------------------
 # black: formateo automatico. Una sola opinion, cero discusiones de estilo.
@@ -47,7 +52,7 @@ select = [
 ignore = ["RUF001", "RUF002", "RUF003"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["tagstats"]
+known-first-party = ["tagstats", "tagframe"]
 
 # ---------------------------------------------------------------------------
 # pytest
