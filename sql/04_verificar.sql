@@ -1,0 +1,202 @@
+-- =====================================================================
+-- 04_verificar.sql  -  Semana 4  -  ESQUELETO PARA COMPLETAR
+--
+-- Responsabilidad: demostrar que la carga salio bien. No con la sensacion de
+-- que "no tiro error", sino comparando contra numeros que ya conocemos.
+--
+-- Como correrlo, parado en la raiz del repo:
+--     psql -U postgres -h localhost -d industrial -f sql/04_verificar.sql
+--
+-- Este archivo es el equivalente de tests/ para la parte SQL. Semana 4 no
+-- tiene pytest contra la base (eso llega en Semana 6, con psycopg2): por
+-- ahora el "test" sos vos mirando si el numero coincide.
+-- =====================================================================
+
+
+-- =====================================================================
+-- POR QUE TENEMOS ORACULO
+--
+-- La gracia de este proyecto es que las respuestas correctas YA EXISTEN. El
+-- mismo dataset ya fue procesado dos veces en Python: por tagstats (Semana 1,
+-- stdlib) y por tagframe (Semana 3, pandas), y los resultados estan escritos
+-- en README.md:55-64.
+--
+-- Asi que no estas verificando "me parece que dio bien". Estas verificando
+-- contra una tabla de numeros que tiene que dar IGUAL. Si SQL y Python
+-- difieren, uno de los dos esta mal, y averiguar cual es el ejercicio.
+--
+-- La tabla, para tenerla a mano (README.md:57-64):
+--
+--   TAG     UNIDAD  MUESTRAS    MIN      MAX   PROMEDIO  DESVIO  ALARMAS
+--   FT-310  m3/h       144     67.30    95.30    82.07    8.59      0
+--   LT-115  %          144     27.10    81.40    60.26   16.97      0
+--   MT-501  A          144     25.40    51.30    31.57    4.26      3
+--   PT-204  bar        144      2.19     5.28     4.66    0.65      9
+--   TT-101  degC       144     73.70   102.10    80.24    7.27     16
+--   VT-501  mm/s       144      1.59     7.95     3.74    1.42      6
+--
+--   TOTAL: 6 tags | 864 muestras | 34 alarmas
+-- =====================================================================
+
+
+-- ---------------------------------------------------------------------
+-- Chequeo 1  -  cantidades basicas
+--
+-- TODO: escribi las consultas que cuenten filas en tags, limites y readings.
+--       Esperado: 6, 6 y 864.
+--
+--       Pista de presentacion: podes hacer las tres de un saque con UNION ALL
+--       y una columna de etiqueta, para leer una sola tabla de salida en vez
+--       de tres. Algo con la forma:
+--           SELECT 'tags' AS tabla, COUNT(*) FROM tags
+--           UNION ALL
+--           SELECT 'limites', COUNT(*) FROM limites
+--           ...
+--       No es obligatorio, pero acostumbrarte a UNION ALL ahora te sirve.
+-- ---------------------------------------------------------------------
+
+
+
+-- ---------------------------------------------------------------------
+-- Chequeo 2  -  integridad referencial
+--
+-- TODO: escribi una consulta que busque lecturas cuyo tag_id NO exista en
+--       tags. Esperado: CERO filas.
+--       Pista: LEFT JOIN de readings contra tags, filtrando por
+--              t.tag_id IS NULL. Ese patron (LEFT JOIN + IS NULL) es la
+--              forma clasica de preguntar "que hay en A que no este en B", y
+--              lo vas a reusar toda la vida.
+--
+-- Nota honesta: si pusiste bien la FOREIGN KEY en 01_esquema.sql, este
+-- chequeo es IMPOSIBLE que falle, porque el motor no te dejaria insertar esa
+-- fila ni queriendo. Lo escribis igual por dos motivos: para comprobar con
+-- tus ojos que la FK esta haciendo su trabajo, y para aprender el patron
+-- antes de necesitarlo en una base que no disenaste vos.
+--
+-- El chequeo que SI puede fallar es el de al lado:
+--
+-- TODO: busca tags que no tengan ninguna lectura (LEFT JOIN al reves).
+--       Con este dataset esperado es cero, porque los 6 tags midieron. Pero
+--       ninguna restriccion garantiza eso: un sensor puede existir en el
+--       catalogo y no haber reportado nada. Es un hueco real que la base no
+--       te avisa.
+-- ---------------------------------------------------------------------
+
+
+
+-- ---------------------------------------------------------------------
+-- Chequeo 3  -  cobertura temporal
+--
+-- TODO: por cada tag, mostra la primera y la ultima lectura y cuantas hay.
+--       Esperado: los 6 tags arrancan en 2026-08-24 06:00:00 y tienen 144
+--       muestras cada uno.
+--       Pista: MIN() y MAX() tambien funcionan sobre TIMESTAMP, no solo
+--       sobre numeros.
+--
+-- Por que este chequeo existe: los COUNT del chequeo 1 pueden dar perfecto
+-- estando todo mal. 864 filas donde un tag tiene 200 y otro 88 suma igual
+-- 864. Contar el total no prueba nada sobre la distribucion.
+-- ---------------------------------------------------------------------
+
+
+
+-- ---------------------------------------------------------------------
+-- Chequeo 4  -  EL importante: reproducir la tabla del README en SQL
+--
+-- TODO: escribi UNA consulta que devuelva, por tag:
+--           nombre, unidad, muestras, minimo, maximo, promedio, desvio
+--       ordenada por nombre, y compara fila por fila contra la tabla de
+--       arriba.
+--
+--       Pista 1: es un JOIN de readings con tags + GROUP BY.
+--       Pista 2: las agregaciones que necesitas son COUNT, MIN, MAX, AVG y
+--                una funcion de desvio (segui leyendo, hay trampa).
+--       Pista 3: para comparar contra el README te conviene redondear a dos
+--                decimales con ROUND(..., 2). Ojo: en Postgres ROUND con dos
+--                argumentos quiere NUMERIC; sobre un AVG que devolvio DOUBLE
+--                PRECISION tenes que castear.
+--
+-- ***** LA TRAMPA DEL DESVIO - lee esto antes de escribir la consulta *****
+--
+--   Postgres te da DOS funciones de desvio estandar y NO son la misma:
+--
+--       stddev_samp()  -> desvio MUESTRAL   (divide por n-1)
+--       stddev_pop()   -> desvio POBLACIONAL (divide por n)
+--
+--   Y stddev(), a secas, es alias de stddev_samp(). O sea: el default de
+--   Postgres es el MUESTRAL.
+--
+--   Pero este proyecto usa el POBLACIONAL en todos lados: tagstats usa
+--   pstdev (Semana 1) y tagframe usa .std(ddof=0) con un comentario que dice
+--   exactamente esto (tagframe/analisis.py, el bloque del groupby).
+--
+--   Entonces: si escribis stddev() te va a dar PARECIDO pero distinto que el
+--   README, y con 144 muestras la diferencia es tan chica que se puede pasar
+--   por alto. Ese es justo el tipo de bug que hay que aprender a cazar: el
+--   que no rompe nada, solo miente un poquito.
+--
+--   TODO: usa la que corresponde, y deja un comentario al lado diciendo por
+--         que. Si tenes 30 segundos, corre las dos y mira la diferencia con
+--         tus propios ojos: entender por que n-1 no es lo mismo que n vale
+--         mas que memorizar cual usar.
+--
+-- ***** SEGUNDA DIFERENCIA, mas sutil, sobre la unidad *****
+--
+--   En Python la unidad sale de las LECTURAS, y si un tag mezclara unidades
+--   el resumen lo muestra como "bar/psi" para que se vea el problema
+--   (tagframe/analisis.py). En tu esquema la unidad vive en tags, una sola
+--   vez, asi que esa mezcla es imposible por construccion.
+--
+--   Las dos decisiones son defendibles y dan lo mismo con estos datos. Pero
+--   son decisiones DISTINTAS, y conviene que sepas que las tomaste: el
+--   esquema previene el problema, el codigo Python lo detecta. Prevenir es
+--   mejor cuando podes; detectar es lo que te queda cuando el dato ya vino.
+-- ---------------------------------------------------------------------
+
+
+
+-- ---------------------------------------------------------------------
+-- Chequeo 5  -  las alarmas
+--
+-- TODO: conta las filas de la vista alarmas. Esperado: 34 en total.
+--
+-- TODO: conta alarmas por tag y compara contra la ultima columna del README:
+--       FT-310=0, LT-115=0, MT-501=3, PT-204=9, TT-101=16, VT-501=6.
+--
+--       Pista importante: si agrupas la VISTA por tag, los tags con CERO
+--       alarmas no van a aparecer en el resultado. No estan en la vista, asi
+--       que no hay nada que agrupar. Para que FT-310 y LT-115 aparezcan con
+--       un 0 tenes que partir de tags y hacer LEFT JOIN contra alarmas.
+--
+--       Esa diferencia entre "no aparece" y "aparece con cero" es la misma
+--       que resuelve tagframe con reindex().fillna(0) despues del groupby
+--       (tagframe/analisis.py). Distinta herramienta, identico problema.
+--
+-- Si te dan 40 alarmas en vez de 34: revisa la vista de 01_esquema.sql.
+-- Casi seguro escribiste <= y >= en vez de < y >, y estas contando como
+-- alarma el valor que toca exactamente el limite.
+-- ---------------------------------------------------------------------
+
+
+
+-- =====================================================================
+-- El cruce final, fuera de psql
+--
+-- Corre el mismo dataset por Python y compara contra lo que devolvio SQL:
+--
+--     python -m tagstats data/sensores_planta.csv -l data/limites.csv
+--
+-- Las dos tablas tienen que decir lo mismo. Si difieren, no elijas cual
+-- creer: encontra de donde sale la diferencia. Los sospechosos habituales,
+-- en orden de probabilidad:
+--
+--     1. stddev() en vez de stddev_pop()          -> desvio distinto
+--     2. <= / >= en vez de < / > en la vista      -> mas alarmas de la cuenta
+--     3. filas duplicadas por falta de ON CONFLICT-> muestras != 144
+--     4. redondeo aplicado en distinto momento    -> el ultimo decimal baila
+--
+-- Cuando los seis renglones coincidan, el checklist
+-- "[] Cargar datos de ejemplo" de guia-a-futuro.md:123 esta cerrado de
+-- verdad, y tenes datos confiables sobre los que practicar los JOINs y las
+-- CTEs que pide el entregable de la semana.
+-- =====================================================================

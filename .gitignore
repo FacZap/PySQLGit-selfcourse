@@ -37,3 +37,10 @@ salidas/
 # Nota: .vscode/ NO se ignora a propósito.
 # settings.json y extensions.json son configuración compartida del proyecto
 # (formateo, linter, pytest) y conviene que viaje con el repo.
+
+# --- Credenciales (Semana 4 en adelante: PostgreSQL) ---
+# La password de la base va en el entorno o en un .env local, NUNCA en el repo.
+# Ver guia-sem4.md, Parte 0.
+.env
+.env.*
+!.env.example
