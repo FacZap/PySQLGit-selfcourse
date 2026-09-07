@@ -79,8 +79,8 @@ frame = ["pandas>=2.2"]                                # ya existente (Sem 3)
 sql   = ["sqlalchemy>=2.0", "psycopg2-binary>=2.9"]    # nuevo, para industrial-data-pipeline
 ```
 
-Si `industrial-data-pipeline` termina siendo un repo aparte (lo más probable — ver Semana 6), va
-en su propio `requirements.txt`:
+**Si `industrial-data-pipeline` termina siendo un repo aparte (lo más probable — ver Semana 6), va
+en su propio `requirements.txt`:**
 
 ```
 sqlalchemy==2.0.*
