@@ -71,6 +71,9 @@
 --       Estas no tienen dependencias entre si, asi que el orden da igual.
 -- ---------------------------------------------------------------------
 
+DROP TABLE IF EXISTS staging_limites;
+DROP TABLE IF EXISTS staging_lecturas;
+
 
 
 -- ---------------------------------------------------------------------
@@ -89,6 +92,14 @@
 --                saber cuantas filas malas habia en total.
 -- ---------------------------------------------------------------------
 
+CREATE TABLE staging_limites (
+    tag         TEXT,
+    minimo      TEXT,
+    maximo      TEXT,
+    unidad      TEXT,
+    descripcion TEXT
+);
+
 
 
 -- ---------------------------------------------------------------------
@@ -102,6 +113,15 @@
 --       las comillas dobles. Como esta tabla es descartable, tenes permiso
 --       para llamarla ts y ahorrarte las comillas. Decidilo vos.
 -- ---------------------------------------------------------------------
+
+CREATE TABLE staging_lecturas (
+    ts      TEXT,   -- se llama ts y no "timestamp": tabla descartable, no vale
+                    -- la pena arrastrar comillas dobles en cada consulta
+    tag     TEXT,
+    valor   TEXT,
+    unidad  TEXT,
+    calidad TEXT
+);
 
 
 
@@ -129,6 +149,9 @@
 --   Si tira "could not open file" -> estas parado en el directorio
 --                        equivocado. cd a la raiz del repo.
 -- =====================================================================
+
+\copy staging_limites FROM 'data/limites.csv' WITH (FORMAT csv, HEADER true)
+\copy staging_lecturas FROM 'data/sensores_planta.csv' WITH (FORMAT csv, HEADER true)
 
 
 

@@ -54,16 +54,27 @@ hablarle.
 ### El problema: `psql` no está en el PATH
 
 El instalador oficial de PostgreSQL en Windows **no agrega sus herramientas al PATH**. Si escribís
-`psql` te va a decir que no existe. Está acá:
+`psql` te va a decir que no existe. En esta máquina está acá:
 
 ```
-C:\Program Files\PostgreSQL\18\bin\psql.exe
+E:\Program Files\PostgreSQL18\18\bin\psql.exe
 ```
+
+**Ojo, esa no es la ruta por defecto.** El instalador propone
+`C:\Program Files\PostgreSQL\18\bin`, pero acá quedó en `E:`, y la carpeta se llama
+`PostgreSQL18`, no `PostgreSQL`. Si alguna vez lo reinstalás en otro lado, no la adivines: la
+ruta real te la dice el propio servicio de Windows.
+
+```bash
+(Get-CimInstance Win32_Service -Filter "Name='postgresql-x64-18'").PathName
+```
+
+Te devuelve la línea de arranque del servicio, con el `bin\` adentro.
 
 Agregalo **solo para esta sesión de PowerShell** (no toques el PATH del sistema, no hace falta):
 
 ```bash
-$env:Path += ";C:\Program Files\PostgreSQL\18\bin"
+$env:Path += ";E:\Program Files\PostgreSQL18\18\bin"
 ```
 
 Eso vive mientras la ventana esté abierta. Cerrás PowerShell y se olvida. Cuando confirmes que
@@ -513,7 +524,7 @@ sale la diferencia. Los sospechosos, en orden de probabilidad:
 ## El flujo completo
 
 ```bash
-$env:Path += ";C:\Program Files\PostgreSQL\18\bin"
+$env:Path += ";E:\Program Files\PostgreSQL18\18\bin"
 ```
 
 ```bash

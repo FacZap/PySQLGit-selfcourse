@@ -32,7 +32,54 @@
 --       Pista 4: existe CASCADE, que borra en cascada lo que dependa. Es
 --                comodo y es peligroso. Si lo usas, que sea porque decidiste
 --                usarlo, no para tapar un error de orden.
+
+-- Cuatro cosas para pensar, en orden:
+
+--1. ¿Qué depende de qué?
+
+--Dibujalo antes de escribir nada. Tenés cuatro objetos: tags, limites, readings, alarmas. Preguntate para cada uno: si borro esto ahora mismo, ¿queda algo apuntando al vacío?
+
+--limites.tag_id → apunta a tags
+--readings.tag_id → apunta a tags
+--alarmas → lee de las tres
+
+--Con eso ya tenés el orden. Se borra de afuera hacia adentro: lo que más depende primero, lo que nadie necesita último. tags es el que sostiene todo, así que cae al final.
+
+--2. ¿Dónde van?
+
+--Arriba de todo, antes del primer CREATE TABLE — en el hueco que dejó el comentario de "Idempotencia". Pensá el archivo como "dejá la base como si recién empezara, y después construila".
+
+--3. IF EXISTS
+
+--La primera corrida no hay nada que borrar. Sin IF EXISTS, Postgres corta con error y no llega a crear nada. Va en las cuatro líneas, no en algunas.
+
+--4. CASCADE — acá está el ejercicio de verdad
+
+--Si ponés el orden bien, no lo necesitás. Si lo ponés mal, CASCADE te lo tapa y el archivo "funciona" igual. Esa es la trampa: DROP TABLE tags CASCADE se lleva puesta la FK de readings sin avisarte que estabas borrando en el orden equivocado.
+
+--Escribilo sin CASCADE primero. Si te tira un error de dependencia, no le agregues CASCADE — corregí el orden. El error te está enseñando el grafo.
+
+--Sintaxis mínima que vas a necesitar (no te doy las líneas armadas):
+
+--DROP TABLE IF EXISTS <nombre>;
+--DROP VIEW  IF EXISTS <nombre>;
+
+--Ojo con la vista: DROP TABLE sobre alarmas te va a decir "alarmas" is not a table — son namespaces distintos para Postgres.
+
+--Cómo verificar que te salió: corré el archivo dos veces seguidas. Si la segunda pasa igual de limpia que la primera, está. Después \dt y \dv en psql.
+
 -- ---------------------------------------------------------------------
+
+-- Orden: de afuera hacia adentro. La vista primero, porque lee de las tres
+-- tablas. readings y limites despues, porque le apuntan a tags con una clave
+-- foranea. tags al final, que es el que sostiene todo.
+--
+-- Sin CASCADE a proposito: si el orden estuviera mal, prefiero que Postgres
+-- me lo diga en vez de que CASCADE lo tape.
+DROP VIEW  IF EXISTS alarmas;
+DROP TABLE IF EXISTS readings;
+DROP TABLE IF EXISTS limites;
+DROP TABLE IF EXISTS tags;
 
 
 
@@ -49,7 +96,7 @@
 -- sensor no midio nada hoy, no aparece, y no por eso deja de existir.
 -- ---------------------------------------------------------------------
 CREATE TABLE tags (
-    tag_id
+    tag_id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
         -- TODO: entero autoincremental, y es la PRIMARY KEY de la tabla.
         --       Pista: tenes dos formas en Postgres. SERIAL (la vieja, la
         --       que usa la chuleta de guia-a-futuro.md:133) y
@@ -57,7 +104,7 @@ CREATE TABLE tags (
         --       recomendada desde PG10). Elegi a conciencia, no por inercia,
         --       y deja anotado por que.
 
-    nombre
+    nombre TEXT NOT NULL UNIQUE,
         -- TODO: el texto "TT-101" del CSV.
         --       Dos preguntas definen las restricciones de esta columna:
         --       puede faltar? puede repetirse?
@@ -66,10 +113,10 @@ CREATE TABLE tags (
         --       tengo". Si no pones esa restriccion aca, alla no vas a tener
         --       contra que chocar.
 
-    unidad
+    unidad TEXT NOT NULL,
         -- TODO: "degC", "bar", "m3/h". Texto obligatorio.
 
-    descripcion
+    descripcion TEXT
         -- TODO: "Temperatura de salida del reactor". Texto.
         --       Este SI puede quedar vacio sin que se rompa nada. Decidilo
         --       vos: NULL permitido o NOT NULL?
@@ -89,7 +136,7 @@ CREATE TABLE tags (
 -- es un motivo tan valido como separar por "cuantos hay".
 -- ---------------------------------------------------------------------
 CREATE TABLE limites (
-    tag_id
+    tag_id INTEGER REFERENCES tags(tag_id) PRIMARY KEY,
         -- TODO: aca pasan DOS cosas a la vez y conviene verlas separadas:
         --       (a) es la PRIMARY KEY de esta tabla -> un tag no puede tener
         --           dos juegos de limites al mismo tiempo;
@@ -97,11 +144,13 @@ CREATE TABLE limites (
         --           definir limites para un sensor que no existe.
         --       Las dos se pueden escribir en la misma linea de columna.
 
-    minimo
+    minimo NUMERIC,
         -- TODO: numero. Que tipo? Ver la nota "NUMERIC vs REAL" al final.
 
-    maximo
+    maximo NUMERIC,
         -- TODO: idem minimo.
+
+    CONSTRAINT range_correct CHECK (minimo < maximo)
 
     -- TODO: una restriccion de TABLA (no de columna) que impida guardar un
     --       rango imposible, con minimo mayor o igual al maximo.
@@ -117,10 +166,10 @@ CREATE TABLE limites (
 -- readings  -  las 864 mediciones. La tabla gorda, la que va a crecer.
 -- ---------------------------------------------------------------------
 CREATE TABLE readings (
-    reading_id
+    reading_id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
         -- TODO: mismo criterio que elegiste para tags.tag_id. Se consistente.
 
-    tag_id
+    tag_id INTEGER REFERENCES tags(tag_id) NOT NULL,
         -- TODO: entero, obligatorio, FOREIGN KEY a tags(tag_id).
         --       Esta es LA linea que convierte esto en un esquema relacional
         --       y no en tres planillas sueltas: de aca en adelante es
@@ -128,7 +177,7 @@ CREATE TABLE readings (
         --       validacion que escribis vos y algun dia te olvidas de
         --       llamar: la hace el motor, en cada INSERT, siempre.
 
-    "timestamp"
+    "timestamp" TIMESTAMP NOT NULL,
         -- TODO: el momento de la medicion. Tipo TIMESTAMP.
         --
         --       Sobre las comillas dobles: timestamp es TAMBIEN un nombre de
@@ -139,16 +188,17 @@ CREATE TABLE readings (
         --       nunca mas. Si la renombras, acordate de renombrarla tambien
         --       en 03_carga.sql, en 04_verificar.sql y en la vista de abajo.
 
-    valor
+    valor NUMERIC NOT NULL,
         -- TODO: el numero medido. Ver "NUMERIC vs REAL" al final.
 
-    calidad
+    calidad TEXT NOT NULL CHECK (calidad IN ('Good', 'Bad', 'Uncertain')),
         -- TODO: "Good" / "Bad" / "Uncertain". Texto obligatorio.
         --       Opcional, si te queda tiempo: un CHECK que solo acepte esos
         --       tres valores. Pensa antes si te conviene: el dia que el
         --       historiador invente un cuarto estado, ese CHECK te rechaza
         --       la carga entera.
 
+    CONSTRAINT readings_tag_ts_unique UNIQUE (tag_id, "timestamp")
     -- TODO: una restriccion de tabla que diga "no puede haber dos lecturas
     --       del mismo tag en el mismo instante".
     --       Por que la necesitas SI O SI: sin ella, correr 03_carga.sql dos
@@ -174,8 +224,15 @@ CREATE TABLE readings (
 --     \d readings
 -- y mira la lista de indices que ya tiene.
 --
--- TODO: decidi si esta linea va o no va, y deja el motivo escrito en un
---       comentario. La decision documentada vale mas que la linea.
+-- DECISION: no va. La tabla readings ya tiene UNIQUE (tag_id, "timestamp"),
+--           y para hacer cumplir esa restriccion Postgres creo por su cuenta
+--           un indice sobre esas dos columnas, en ese mismo orden. Agregar
+--           idx_readings_tag_ts seria un segundo indice identico: no acelera
+--           ninguna consulta y encarece cada INSERT y cada UPDATE.
+--
+--           Comprobalo vos antes de creerme: corre  \d readings  en psql y
+--           mira la seccion "Indexes:". Tiene que estar ya listado
+--           readings_tag_ts_unique, que lo creo el UNIQUE solo.
 -- ---------------------------------------------------------------------
 
 
@@ -192,6 +249,14 @@ CREATE TABLE readings (
 -- el maximo de TT-101 de 95 a 100, una tabla de alarmas te quedaria llena de
 -- alarmas viejas que ya no son alarmas y habria que salir a corregirlas. La
 -- vista se corrige sola, porque no guardo nada: vuelve a mirar limites.
+
+CREATE VIEW alarmas AS(
+    SELECT nombre, "timestamp", valor, minimo, maximo FROM readings as lect
+    INNER JOIN tags as T ON lect.tag_id = T.tag_id
+    INNER JOIN limites as L ON lect.tag_id = L.tag_id
+    WHERE lect.valor < L.minimo OR lect.valor > L.maximo
+);
+
 --
 -- TODO: escribi  CREATE VIEW alarmas AS  seguido de un SELECT que cruce las
 --       tres tablas y devuelva SOLO las lecturas fuera de rango.

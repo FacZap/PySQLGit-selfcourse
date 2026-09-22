@@ -20,7 +20,9 @@ Set-Location (Split-Path $PSScriptRoot -Parent)
 # El Set-Location de arriba es lo que hace que funcionen: no lo saques.
 
 # psql no viene en el PATH cuando instalas PostgreSQL en Windows con el
-# instalador oficial. Vive en C:\Program Files\PostgreSQL\<version>\bin\.
+# instalador oficial. En esta maquina vive en E:\Program Files\PostgreSQL18\18\bin\
+# (la ruta por defecto habria sido C:\Program Files\PostgreSQL\<version>\bin\, pero
+# no es la que elegiste al instalar).
 $BaseDeDatos = "industrial"
 $Usuario     = "postgres"
 $Servidor    = "localhost"
@@ -42,11 +44,17 @@ function Buscar-Psql {
     #          Pista: Get-Command psql -ErrorAction SilentlyContinue
     #          (mismo patron que usa Invocar-Paso en scripts\verificar.ps1)
 
-    # TODO: 2) si no esta, buscalo en C:\Program Files\PostgreSQL\*\bin\psql.exe
-    #          Pista: Get-ChildItem con comodin en la ruta te devuelve todas
-    #          las versiones instaladas. Si hay mas de una, quedate con la mas
-    #          nueva: ordena por nombre descendente y toma la primera.
-    #          Hoy en tu maquina hay una sola: la 18.
+    # TODO: 2) si no esta, buscalo en el disco. OJO con la ruta: NO es la
+    #          ruta por defecto del instalador. En esta maquina psql vive en
+    #              E:\Program Files\PostgreSQL18\18\bin\psql.exe
+    #          y el default habria sido C:\Program Files\PostgreSQL\18\bin\.
+    #          Pista: armate una lista con las dos raices posibles y recorrela
+    #          con Get-ChildItem, dejando comodin en la version:
+    #              "E:\Program Files\PostgreSQL18\*\bin\psql.exe"
+    #              "C:\Program Files\PostgreSQL\*\bin\psql.exe"
+    #          Si aparece mas de una version, quedate con la mas nueva: ordena
+    #          por nombre descendente y toma la primera.
+    #          Hoy en tu maquina hay una sola: la 18, en E:.
 
     # TODO: 3) si no aparece por ningun lado, devolve $null. El que llama
     #          decide que hacer; esta funcion solo busca.
@@ -64,7 +72,7 @@ function Invocar-Sql {
     # TODO: invoca psql con los argumentos que corresponden:
     #         -U $Usuario  -h $Servidor  -d $BaseDeDatos  -f $Archivo
     #
-    #       Pista 1: psql.exe esta en "C:\Program Files\...", con espacios en
+    #       Pista 1: psql.exe esta en "E:\Program Files\...", con espacios en
     #                la ruta. Para ejecutarlo hace falta el operador de
     #                llamada:  & $RutaPsql @argumentos
     #
@@ -156,7 +164,7 @@ exit 0
 # crear una base desde adentro de si misma, hace falta conectarse a otra
 # primero. Es un paso de una sola vez:
 #
-#     & "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -h localhost -c "CREATE DATABASE industrial;"
+#     & "E:\Program Files\PostgreSQL18\18\bin\psql.exe" -U postgres -h localhost -c "CREATE DATABASE industrial;"
 #
 # Detalle: no lleva -d. Sin -d, psql se conecta a la base que se llama igual
 # que el usuario (postgres), que existe siempre. Desde ahi si podes crear otra.

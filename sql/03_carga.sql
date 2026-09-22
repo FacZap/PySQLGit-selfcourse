@@ -59,6 +59,12 @@
 --       guardan HECHOS. No se tratan igual.
 -- =====================================================================
 
+-- Decision:
+--   tags     -> DO UPDATE : catalogo mantenido a mano; si corrigen la unidad o
+--                          la descripcion en limites.csv, gana el valor nuevo.
+--   limites  -> DO UPDATE : configuracion; un setpoint nuevo pisa al viejo.
+--   readings -> DO NOTHING: hechos; una lectura del pasado no cambia, si llega
+--                          repetida es la misma.
 
 -- ---------------------------------------------------------------------
 -- Paso 1  -  tags
@@ -82,7 +88,18 @@
 --                que no pusiste esa restriccion en el esquema.
 -- ---------------------------------------------------------------------
 
+INSERT INTO tags (nombre, unidad, descripcion)
+SELECT tag, unidad, descripcion
+FROM staging_limites
+ON CONFLICT (nombre) DO UPDATE
+    SET unidad      = EXCLUDED.unidad,
+        descripcion = EXCLUDED.descripcion;
 
+-- Para cada fila de staging_limites:
+--     si nombre no existe en tags:
+--         INSERT
+--     si nombre ya existe:
+--         UPDATE unidad y descripcion
 
 -- ---------------------------------------------------------------------
 -- Paso 2  -  limites
@@ -113,6 +130,14 @@
 --       deberia pasar (son seis filas escritas a mano), y si pasa, el dato
 --       esta mal, no la consulta.
 -- ---------------------------------------------------------------------
+
+INSERT INTO limites (tag_id, minimo, maximo)
+SELECT t.tag_id, s.minimo::NUMERIC, s.maximo::NUMERIC
+FROM staging_limites s
+JOIN tags t ON t.nombre = s.tag
+ON CONFLICT (tag_id) DO UPDATE
+    SET minimo = EXCLUDED.minimo,
+        maximo = EXCLUDED.maximo;
 
 
 
@@ -150,7 +175,11 @@
 --       01_esquema.sql.
 -- ---------------------------------------------------------------------
 
-
+INSERT INTO readings(tag_id, "timestamp", valor, calidad)
+SELECT t.tag_id, s.ts::TIMESTAMP, s.valor::NUMERIC, s.calidad
+FROM staging_lecturas s
+JOIN tags t ON t.nombre = s.tag
+ON CONFLICT (tag_id, "timestamp") DO NOTHING;
 
 -- ---------------------------------------------------------------------
 -- Limpieza del staging
@@ -159,11 +188,19 @@
 -- una copia desactualizada de todo, esperando a que alguien la confunda con
 -- el dato bueno.
 --
--- TODO: DROP TABLE de las dos tablas de staging.
+-- Sin IF EXISTS a proposito, al reves que en 02: si llegaste hasta aca las
+-- dos tablas existen si o si. Que falle fuerte si no estan.
 --
 -- (Si estas debugueando y todavia queres mirarlas, comenta esta parte. Pero
 -- que quede comentada a proposito, con una nota, no olvidada.)
+--
+-- Consecuencia a tener presente: despues de esto, 03 solo no se puede volver
+-- a correr, porque el staging ya no existe. La prueba de idempotencia del
+-- checklist es correr 02 + 03 dos veces, y que readings siga en 864.
 -- ---------------------------------------------------------------------
+
+DROP TABLE staging_limites;
+DROP TABLE staging_lecturas;
 
 
 

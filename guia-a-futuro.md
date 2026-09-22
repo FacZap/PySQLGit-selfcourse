@@ -120,7 +120,7 @@ consultas que usen JOINs y CTEs.
 **Checklist:**
 ```
 [] Diseñar esquema con tablas tags / readings / alarms
-[] Cargar datos de ejemplo
+[X] Cargar datos de ejemplo
 [] Escribir 5 queries con JOINs
 [] Escribir 3 queries con CTEs encadenadas
 ```
