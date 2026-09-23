@@ -1,6 +1,6 @@
 # TL;DR - TODO
 
-[] Semana 4 — Modelado + JOINs + CTEs
+[X] Semana 4 — Modelado + JOINs + CTEs
 [] Semana 5 — Window functions + planes de ejecución
 [] Semana 6 — Diseño + ingesta
 [] Semana 7 — Transformación + analítica
@@ -237,10 +237,10 @@ detección de saltos con LAG) + análisis documentado de un execution plan.
 
 **Checklist:**
 ```
-[] Calcular promedio móvil de una señal con OVER
-[] Detectar variaciones bruscas con LAG/LEAD
+[x] Calcular promedio móvil de una señal con OVER
+[skipped] Detectar variaciones bruscas con LAG/LEAD
 [] Ranking de alarmas por equipo con RANK
-[] Leer un execution plan y anotar qué optimizar
+[skipped] Leer un execution plan y anotar qué optimizar
 ```
 
 ### Chuleta — window functions
