@@ -14,8 +14,12 @@
 > entregable y checklist tal como están en el roadmap, más una "chuleta" de sintaxis SQL y
 > patrones de arquitectura para consultar mientras escribís el código a mano. No resuelve tu
 > ejercicio puntual — el esquema propio, las queries propias, la arquitectura propia del pipeline
-> las seguís pensando vos. Si al llegar a una semana concreta querés más profundidad tipo
-> sem2/sem3, escribí un `guia-semN.md` dedicado en el mismo estilo.
+> las seguís pensando vos. Cada semana con más profundidad tipo sem2/sem3 tiene su propio
+> `guia-semN.md` dedicado, linkeado al principio de la sección correspondiente: Semana 4
+> ([guia-sem4.md](guia-sem4.md)), 6 ([guia-sem6.md](guia-sem6.md)),
+> 7 ([guia-sem7.md](guia-sem7.md)) y 8 ([guia-sem8.md](guia-sem8.md)). La Semana 5 no tiene guía
+> aparte: va comentada dentro de [sql/05_promedio_movil.sql](sql/05_promedio_movil.sql) y
+> [sql/06_ranking_alarmas.sql](sql/06_ranking_alarmas.sql).
 
 ## Contexto general
 
@@ -104,6 +108,9 @@ URL = "postgresql+psycopg2://postgres:tu_password@localhost:5432/industrial"
 ## Semana 4 — Modelado + JOINs + CTEs
 
 Foco: pensar en relaciones y escribir queries legibles.
+
+> **Guía dedicada:** [guia-sem4.md](guia-sem4.md) — conectarse a Postgres, `\copy` vs `COPY`,
+> staging, idempotencia y verificación cruzada contra los números del README.
 
 **Temas:** diseño de tablas y claves · índices (intro) · JOINs (inner/left/...) · agregaciones ·
 CTEs (`WITH`) · subqueries.
@@ -306,6 +313,10 @@ Qué mirar primero en la salida de `EXPLAIN ANALYZE`:
 
 Foco: arquitectura del pipeline y carga de datos a una DB.
 
+> **Guía dedicada:** [guia-sem6.md](guia-sem6.md) — las tres decisiones iniciales, el `src/`
+> layout, qué es "validar" de verdad, los cuatro conceptos de SQLAlchemy y la idempotencia desde
+> Python.
+
 **Temas:** arquitectura ingesta→validación→storage · estructura de proyecto (`src/`, `tests/`) ·
 SQLAlchemy / **psycopg2** · `requirements.txt`.
 
@@ -386,6 +397,9 @@ with Session(engine) as session:
 ## Semana 7 — Transformación + analítica
 
 Foco: convertir datos crudos en KPIs reproducibles.
+
+> **Guía dedicada:** [guia-sem7.md](guia-sem7.md) — qué mata la reproducibilidad, SQL vs pandas,
+> las tres trampas del resampleo, KPIs con oráculo y tests contra una base real.
 
 **Temas:** limpieza y resampleo temporal · KPIs (móviles, anomalías simples) · SQL desde Python ·
 tests del pipeline.
@@ -468,6 +482,9 @@ def test_kpi_es_reproducible(datos_de_ejemplo):
 ## Semana 8 — Empaque + portfolio
 
 Foco: dejar el proyecto presentable y vendible.
+
+> **Guía dedicada:** [guia-sem8.md](guia-sem8.md) — los 90 segundos del lector, el README, el
+> diagrama en Mermaid, Postgres como service del CI, el release y el framing para cliente.
 
 **Temas:** README profesional + diagrama · GitHub Actions (CI: corre tests) · badges · framing
 para cliente / Upwork.
