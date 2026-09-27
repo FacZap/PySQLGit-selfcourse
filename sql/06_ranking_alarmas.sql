@@ -76,8 +76,17 @@
 --       VT-501  16:55  7.95   -> 11.97 %
 -- ---------------------------------------------------------------------
 
-
-
+SELECT
+    split_part(nombre, '-', 1) AS equipo,
+    CASE
+        WHEN valor > maximo THEN valor - maximo
+        WHEN valor < minimo THEN minimo - valor
+    END AS exceso,
+    CASE
+        WHEN valor > maximo THEN (valor - maximo) / (maximo - minimo) * 100
+        WHEN valor < minimo THEN (minimo - valor) / (maximo - minimo) * 100
+    END AS exceso_pct
+FROM alarmas;
 
 -- ---------------------------------------------------------------------
 -- Paso 2  -  ROW_NUMBER vs RANK vs DENSE_RANK, lado a lado
@@ -115,8 +124,52 @@
 -- de 05_promedio_movil.sql.) Que agregarias al ORDER BY?
 -- ---------------------------------------------------------------------
 
+WITH excesos AS (
+    SELECT
+        "timestamp" AS ttime,
+        split_part(nombre, '-', 1) AS equipo,
+        CASE
+            WHEN valor > maximo THEN valor - maximo
+            WHEN valor < minimo THEN minimo - valor
+        END AS exceso,
+        CASE
+            WHEN valor > maximo THEN
+                (valor - maximo) * 100.0 / (maximo - minimo)
+            WHEN valor < minimo THEN
+                (minimo - valor) * 100.0 / (maximo - minimo)
+        END AS exceso_pct
+    FROM alarmas
+)
+SELECT
+    ROW_NUMBER() OVER (
+        PARTITION BY equipo
+        ORDER BY exceso_pct DESC
+    ) AS row_num,
+    RANK() OVER (
+        PARTITION BY equipo
+        ORDER BY exceso_pct DESC
+    ) AS rank,
+    DENSE_RANK() OVER (
+        PARTITION BY equipo
+        ORDER BY exceso_pct DESC
+    ) AS dense_rank,
+    equipo,
+    ttime,
+    exceso,
+    exceso_pct
+FROM excesos;
 
-
+-- Iter 3
+-- --------------
+-- exceso_pct	ROW_NUMBER	RANK	DENSE_RANK
+-- 50	1	1	1
+-- 50	2	1	1
+-- 30	3	3	2
+-- 20	4	4	3
+-- ROW_NUMBER(): siempre asigna números consecutivos, incluso si hay empates.
+-- RANK(): los empates comparten posición y dejan un salto.
+-- DENSE_RANK(): los empates comparten posición pero no deja saltos.
+-- --------------
 
 -- ---------------------------------------------------------------------
 -- Paso 3  -  TOP 3 por equipo  (el patron que vas a usar toda la vida)
@@ -161,7 +214,91 @@
 -- las que estan en el podio"? Anotalo.
 -- ---------------------------------------------------------------------
 
+-- Paso 3a  -  la version ROTA (comentada a proposito, ver el error abajo)
+--
+-- WITH base AS (
+--     SELECT
+--         nombre,
+--         "timestamp" AS ttime,
+--         split_part(nombre, '-', 2) AS equipo,
+--         CASE
+--             WHEN valor > maximo THEN (valor - maximo) * 100.0 / (maximo - minimo)
+--             WHEN valor < minimo THEN (minimo - valor) * 100.0 / (maximo - minimo)
+--         END AS exceso_pct
+--     FROM alarmas
+-- )
+-- SELECT equipo, nombre, ttime, exceso_pct,
+--        RANK() OVER (PARTITION BY equipo ORDER BY exceso_pct DESC) AS ranking
+-- FROM base
+-- WHERE RANK() OVER (PARTITION BY equipo ORDER BY exceso_pct DESC) <= 3;
+--
+-- Error EXACTO de Postgres:
+--     ERROR:  window functions are not allowed in WHERE
+--     LINE 16: WHERE RANK() OVER (PARTITION BY equipo ORDER BY exceso_pct DESC...
+--             ^
+--
+-- Y la variante con el alias:
+--     ... FROM base WHERE ranking <= 3;
+--     ERROR:  column "ranking" does not exist
+--     HINT:  Perhaps you meant to reference the column "base.nombre".
+--
+-- Son el mismo problema visto de dos lados: cuando corre el WHERE, ni la
+-- ventana se calculo todavia, ni el alias del SELECT existe.
 
+
+-- Paso 3b  -  la version que ANDA: el CTE calcula, el SELECT de afuera filtra
+
+WITH base AS (
+    SELECT
+        nombre,
+        "timestamp" AS ttime,
+        split_part(nombre, '-', 2) AS equipo,
+        CASE
+            WHEN valor > maximo THEN (valor - maximo) * 100.0 / (maximo - minimo)
+            WHEN valor < minimo THEN (minimo - valor) * 100.0 / (maximo - minimo)
+        END AS exceso_pct
+    FROM alarmas
+),
+rankeadas AS (
+    SELECT
+        equipo,
+        nombre,
+        ttime,
+        exceso_pct,
+        RANK() OVER (
+            PARTITION BY equipo
+            ORDER BY exceso_pct DESC
+        ) AS ranking
+    FROM base
+)
+SELECT
+    equipo,
+    nombre,
+    ttime::time AS hora,
+    ROUND(exceso_pct, 2) AS exceso_pct
+FROM rankeadas
+WHERE ranking <= 3
+ORDER BY equipo, ranking;
+
+-- Para el SELECT de afuera, "ranking" es una columna comun y corriente que
+-- viene del FROM. El WHERE no tiene nada raro que filtrar.
+
+
+-- Respuesta a la pregunta de diseno (top 3 con empates):
+--
+--   "las 3 peores"  -> ROW_NUMBER. Queres EXACTAMENTE 3 filas, aunque para
+--                      eso haya que romper un empate de forma arbitraria.
+--                      (Si te molesta lo arbitrario, desempata en el
+--                      ORDER BY: ..., ttime ASC.)
+--
+--   "todas las del  -> DENSE_RANK. Son los 3 primeros PUESTOS, y si dos
+--    podio"            comparten el 1ro, entran las dos. Por eso con
+--                      ROUND() en el 101 da 4 filas.
+--
+--   RANK queda en el medio: comparte puesto pero SALTA numeros, asi que
+--   <= 3 te puede dar 3 filas o 4 segun donde caiga el empate. Es el menos
+--   predecible de los tres para un "top N" (aunque es el correcto cuando lo
+--   que te importa es el numero de puesto en si, como en una competencia).
 
 
 -- ---------------------------------------------------------------------
